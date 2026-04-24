@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AR City Quest - Interactive Storytelling</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body { margin: 0; font-family: Arial; background: #000; color: white; text-align: center; }
+        #instructions { position: absolute; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px; }
+        button { padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 25px; cursor: pointer; margin: 10px; }
+        #score { position: absolute; top: 10px; right: 10px; font-size: 24px; z-index: 100; }
+    </style>
+</head>
+<body>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
+        <!-- AR Camera -->
+        <a-camera gps-camera rotation-reader></a-camera>
+
+        <!-- Interactive Story Elements (Spawn on scan) -->
+        <a-box position="0 0.5 -2" color="#4CC3D9" scale="0.5 0.5 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"
+               event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2"
+               event-set__leave="_event: mouseleave; scale: 0.5 0.5 0.5"
+               cursor-listener>
+            <a-text value="Tap Quest Start!\nScore: 0" align="center" color="black" scale="2 2 1" position="0 0.6 0"></a-text>
+        </a-box>
+
+        <!-- Hidden Quest Rewards (GPS/position-based reveal) -->
+        <a-sphere id="reward1" position="-1 0.3 -3" radius="0.2" color="gold" visible="false" animation__scale="property: scale; startEvents: reveal; from: 0.1 0.1 0.1; to: 1 1 1; dur: 500">
+            <a-text value="Treasure Found!\n+10 pts" color="black" scale="1.5 1.5 1" position="0 0.3 0"></a-text>
+        </a-sphere>
+
+        <!-- Storytelling NPC -->
+        <a-cylinder id="npc" position="1 0 -2.5" radius="0.3" height="1.5" color="#EF2D5E" visible="false" animation="property: rotation; to: 360 0 0; loop: true; dur: 8000">
+            <a-text value="Choose: Left or Right Path?" color="white" align="center" scale="2 2 1" position="0 0.8 0"></a-text>
+        </a-cylinder>
+    </a-scene>
+
+    <div id="instructions">
+        <h2>**AR City Quest**</h2>
+        <p>1. Point camera at table/room<br>2. Tap green box to start story<br>3. Walk to find treasures/NPCs<br>4. Share score!</p>
+        <button onclick="startQuest()">Start Quest</button>
+        <button onclick="shareScore()">Share Score</button>
+    </div>
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+
+    <script>
+        let score = 0;
+        const scoreEl = document.getElementById('scoreValue');
+
+        // Start interactive quest
+        function startQuest() {
+            document.querySelector('a-box').setAttribute('scale', '0.3 0.3 0.3');
+            document.querySelector('#npc').setAttribute('visible', true);
+            setTimeout(() => document.querySelector('#reward1').setAttribute('visible', true), 3000);
+            updateScore(10);
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreEl.textContent = score;
+            // Persist & simple gamification
+            localStorage.setItem('arQuestScore', score);
+        }
+
+        // Click listeners for interactivity
+        document.querySelector('a-scene').addEventListener('click', (e) => {
+            if (e.detail.cursorEl && e.detail.cursorEl.components['cursor-listener']) {
+                updateScore(5); // Reward interaction
+            }
+            if (e.target.id === 'reward1') {
+                e.target.emit('reveal');
+                updateScore(20);
+            }
+        });
+
+        // Viral sharing
+        function shareScore() {
+            if (navigator.share) {
+                navigator.share({ title: 'AR City Quest', text: `I scored ${score} pts! Join the adventure!`, url: window.location.href });
+            } else {
+                alert(`Score: ${score} - Share this link: ${window.location.href}`);
+            }
+        }
+
+        // Load saved score
+        score = parseInt(localStorage.getItem('arQuestScore')) || 0;
+        scoreEl.textContent = score;
+    </script>
+</body>
+</html>
